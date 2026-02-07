@@ -1,0 +1,5 @@
+# Inserisci qui i nomi utente (es. leonardo) o gli ID utente (es. 123456789)
+# Uno per riga
+leonardo
+antonio
+rebecca
