@@ -1,5 +1,21 @@
-# Inserisci qui i nomi utente (es. leonardo) o gli ID utente (es. 123456789)
-# Uno per riga
-leonardo
-antonio
-rebecca
+# Inserisci qui i NOMI REALI (Nome Cognome) degli studenti autorizzati.
+# Il bot userà questi nomi per rinominare gli utenti su Discord.
+# Uno per riga.
+Arcangelo Passarella
+Alessandro Grassi
+Matteo Petrarca
+Remzi Jashari
+Gaetano Vorrano
+Lucia Ricci
+Luca Salvadori
+Leonardo Lazzerini
+Antonio
+Denisa
+Lollo 
+Catalin 
+Alin 
+Milap Singh
+Massimiliano
+Davide Chimenti
+Paolo Pantanetti
+Stefano Fois
