@@ -20,38 +20,84 @@ except ValueError:
     print("Error: STUDENT_ROLE_ID must be an integer.")
     exit(1)
 
-# Define the Verification View
-class VerificationView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None) # Persistent view
+# Define the Modal for Name Input
+class VerificationModal(discord.ui.Modal, title='Verifica Studente'):
+    name_input = discord.ui.TextInput(
+        label='Nome e Cognome',
+        placeholder='Es. Mario Rossi',
+        min_length=2,
+        max_length=50,
+    )
 
-    @discord.ui.button(label="Verificati", style=discord.ButtonStyle.green, custom_id="persistent_view:verify")
-    async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
-        # Read allowed users
-        allowed_users = []
+    async def on_submit(self, interaction: discord.Interaction):
+        # 1. Get the input name
+        input_name = self.name_input.value.strip()
+        
+        # 2. Read allowed users (Real Names)
+        allowed_names = []
         try:
             with open('allowed_users.txt', 'r', encoding='utf-8') as f:
-                allowed_users = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+                allowed_names = [line.strip().lower() for line in f if line.strip() and not line.startswith('#')]
         except FileNotFoundError:
-            print("Warning: allowed_users.txt not found. No one can verify.")
+            print("Warning: allowed_users.txt not found.")
 
-        user_id = str(interaction.user.id)
-        username = interaction.user.name
-
-        if user_id not in allowed_users and username not in allowed_users:
-            await interaction.response.send_message("❌ **Accesso Negato**: Non sei nella lista degli studenti autorizzati.", ephemeral=True)
+        # 3. Check if input name is allowed
+        if input_name.lower() not in allowed_names:
+            await interaction.response.send_message(
+                f"❌ **Accesso Negato**\nIl nome `{input_name}` non è nella lista autorizzata.\n"
+                "Assicurati di aver scritto **Nome e Cognome** esattamente come comunicato.",
+                ephemeral=True
+            )
             return
 
-
+        # 4. Assign Role & Rename
         role = interaction.guild.get_role(STUDENT_ROLE_ID)
         if role:
             if role in interaction.user.roles:
                 await interaction.response.send_message("Hai già il ruolo Student!", ephemeral=True)
             else:
-                await interaction.user.add_roles(role)
-                await interaction.response.send_message(f"✅ Verifica completata! Ti è stato assegnato il ruolo **{role.name}**!", ephemeral=True)
+                try:
+                    # Assign Role
+                    await interaction.user.add_roles(role)
+                    
+                    # Rename User (Change Nickname)
+                    # Note: Bot cannot rename Server Owner or Roles higher than itself
+                    try:
+                        await interaction.user.edit(nick=input_name)
+                        rename_msg = f"e rinominato in **{input_name}**"
+                    except discord.Forbidden:
+                        rename_msg = "(non ho il permesso di rinominarti, ma il ruolo è stato dato)"
+                    
+                    await interaction.response.send_message(f"✅ **Verifica Completata!**\nSei stato identificato come `{input_name}` {rename_msg}.", ephemeral=True)
+                
+                except discord.Forbidden:
+                    await interaction.response.send_message("❌ Errore: Il bot non ha i permessi per darti il ruolo. Contatta un admin.", ephemeral=True)
         else:
-            await interaction.response.send_message("Errore: Ruolo 'Student' non trovato nel server. Contatta un amministratore.", ephemeral=True)
+            await interaction.response.send_message("Errore: Ruolo 'Student' non trovato.", ephemeral=True)
+
+# Define the Verification View (Button only opens the Modal)
+class VerificationView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None) # Persistent view
+
+    @discord.ui.button(label="Verificati", style=discord.ButtonStyle.green, custom_id="persistent_view:verify_v2")
+    async def verify(self, interaction: discord.Interaction, button: discord.ui.Button):
+        print("DEBUG: Button clicked! Opening Modal...")
+        try:
+            await interaction.response.send_modal(VerificationModal())
+        except Exception as e:
+            print(f"ERROR in button handler: {e}")
+            try:
+                await interaction.response.send_message(f"❌ Errore interno: {e}", ephemeral=True)
+            except:
+                pass
+
+    async def on_error(self, interaction: discord.Interaction, error: Exception, item):
+        print(f"ERROR in view: {error}")
+        try:
+            await interaction.response.send_message(f"❌ Errore: {error}", ephemeral=True)
+        except:
+            pass
 
 class VerifyBot(commands.Bot):
     def __init__(self):
